@@ -1,0 +1,12 @@
+# Python
+__pycache__/
+*.pyc
+venv/
+*.sqlite3
+.env
+staticfiles/
+media/
+
+# Node
+node_modules/
+build/
