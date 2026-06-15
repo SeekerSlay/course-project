@@ -20,32 +20,15 @@
 
 ## Быстрый старт (локально)
 
-### Backend
+Запустите `run.bat` из корневой папки проекта.
 
-```bash
-cd backend
-python -m venv venv
-# Windows:
-venv\Scripts\activate
-# Linux/macOS:
-source venv/bin/activate
+Скрипт автоматически откроет два окна терминала:
+- **Backend** (Daphne) — порт 8000
+- **Frontend** (React) — порт 3000
 
-pip install -r requirements.txt
-cp .env.example .env
+> ⚠️ Окна терминала нельзя закрывать до завершения работы.
 
-python manage.py migrate
-python manage.py createsuperuser
-python manage.py runserver
-```
-
-### Frontend
-
-```bash
-cd frontend
-npm install
-cp .env.example .env
-npm start
-```
+### Доступные адреса
 
 Приложение доступно на `http://localhost:3000`  
 API доступно на `http://localhost:8000/api`  
@@ -121,9 +104,9 @@ python manage.py test
 > Раздел заполняется по завершении проекта.
 
 ### Метрики Git
-- Всего коммитов: —
-- Период: —
-- Средняя частота: —
+- Всего коммитов: 23
+- Период: 03.04.2026-15.06.2026
+- Средняя частота: 0.7 коммита в неделю
 
 ---
 
