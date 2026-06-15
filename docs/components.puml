@@ -1,0 +1,129 @@
+@startuml Components
+!theme plain
+skinparam backgroundColor #FAFAFA
+skinparam component {
+  BackgroundColor #E8F5E9
+  BorderColor #2E7D32
+  ArrowColor #388E3C
+}
+skinparam package {
+  BackgroundColor #F1F8E9
+  BorderColor #558B2F
+}
+skinparam database {
+  BackgroundColor #FFF9C4
+  BorderColor #F9A825
+}
+skinparam cloud {
+  BackgroundColor #E3F2FD
+  BorderColor #1565C0
+}
+
+title Диаграмма компонентов — VeganShop (Траектория В)
+
+cloud "Браузер (Client)" {
+  package "React SPA" {
+    [App.jsx\n(Router)] as App
+    [AuthContext\n(JWT, user)] as AuthCtx
+    [CartContext\n(optimistic)] as CartCtx
+
+    package "Pages" {
+      [HomePage] as PHome
+      [ProductListPage\n(React Query)] as PProd
+      [ProductDetailPage] as PDetail
+      [CartPage] as PCart
+      [CheckoutPage] as PCheck
+      [OrderDetailPage\n(WebSocket)] as POrder
+      [AdminPanelPage] as PAdmin
+    }
+
+    package "Services" {
+      [api.js\n(Axios + interceptors)] as ApiSvc
+      [websocket.js\n(autoReconnect)] as WsSvc
+    }
+
+    package "Hooks" {
+      [useWebSocket] as HWS
+      [useNotifications] as HNotif
+    }
+  }
+}
+
+package "Django Backend" {
+  package "config" {
+    [urls.py] as Urls
+    [asgi.py\n(ProtocolTypeRouter)] as Asgi
+  }
+
+  package "users app" {
+    [RegisterView] as URegister
+    [ProfileView] as UProfile
+    [LogoutView] as ULogout
+  }
+
+  package "products app" {
+    [CategoryViewSet] as PVCat
+    [ProductViewSet\n(filter, search, paginate)] as PVProd
+    [CommentViewSet] as PVCom
+    [ProductFilter] as PFilt
+  }
+
+  package "orders app" {
+    [CartViewSet\n(optimistic backend)] as OCart
+    [OrderViewSet\n(checkout, cancel)] as OOrder
+    [OrderStatusConsumer\n(WebSocket)] as WSOrder
+    [NotificationConsumer\n(WebSocket)] as WSNotif
+  }
+
+  package "SimpleJWT" {
+    [TokenObtainPairView] as JWTLogin
+    [TokenRefreshView] as JWTRefresh
+    [TokenBlacklist] as JWTBlack
+  }
+}
+
+database "SQLite / PostgreSQL" as DB
+queue "InMemoryChannelLayer\n(Redis в prod)" as CL
+
+' HTTP connections
+ApiSvc --> Urls : HTTP/REST\n(Bearer JWT)
+Urls --> URegister
+Urls --> UProfile
+Urls --> ULogout
+Urls --> JWTLogin
+Urls --> JWTRefresh
+Urls --> PVCat
+Urls --> PVProd
+Urls --> PVCom
+Urls --> OCart
+Urls --> OOrder
+
+' WebSocket connections
+WsSvc --> Asgi : WebSocket
+Asgi --> WSOrder : ws/orders/{id}/
+Asgi --> WSNotif : ws/notifications/
+
+' Channel Layer
+WSOrder --> CL
+WSNotif --> CL
+OOrder --> CL : group_send\n(status update)
+
+' DB
+URegister --> DB
+UProfile --> DB
+PVProd --> DB
+OOrder --> DB
+WSOrder --> DB
+
+' Context usage
+App --> AuthCtx
+App --> CartCtx
+POrder --> HWS
+HWS --> WsSvc
+HNotif --> HWS
+PProd --> ApiSvc
+PDetail --> ApiSvc
+PCart --> CartCtx
+PCheck --> CartCtx
+PAdmin --> ApiSvc
+@enduml

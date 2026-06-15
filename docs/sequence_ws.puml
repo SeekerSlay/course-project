@@ -1,0 +1,61 @@
+@startuml SequenceWebSocket
+!theme plain
+skinparam backgroundColor #FAFAFA
+skinparam sequence {
+  ActorBackgroundColor #C8E6C9
+  ActorBorderColor #2E7D32
+  ParticipantBackgroundColor #E8F5E9
+  ParticipantBorderColor #2E7D32
+  ArrowColor #388E3C
+}
+
+title Диаграмма последовательности — UC-10 «Отслеживание статуса заказа»
+
+actor "Покупатель" as Buyer
+actor "Администратор" as Admin
+participant "OrderDetailPage\n(React)" as ODP
+participant "useWebSocket\n(hook)" as HWS
+participant "OrderStatusConsumer\n(Channels)" as WSC
+participant "InMemoryChannelLayer" as CL
+participant "AdminPanelPage\n(React)" as AP
+participant "OrderViewSet\n(Django)" as OV
+
+== Подключение покупателя ==
+Buyer -> ODP : открыть /orders/{id}
+activate ODP
+ODP -> HWS : useWebSocket('/ws/orders/{id}/')
+activate HWS
+HWS -> WSC : WS connect
+activate WSC
+WSC -> WSC : _check_order_access(user, id)
+WSC -> CL : group_add('order_{id}', channel)
+WSC --> HWS : {"type": "connected"}
+HWS --> ODP : соединение установлено
+deactivate HWS
+
+== Изменение статуса администратором ==
+Admin -> AP : выбрать новый статус
+AP -> OV : PATCH /api/orders/{id}/update_status/\n{status: "shipped"}
+activate OV
+OV -> OV : order.status = "shipped"\norder.save()
+OV -> CL : group_send('order_{id}',\n{type: order_status_update, ...})
+OV -> CL : group_send('user_{uid}_notifications',\n{type: notification, ...})
+OV --> AP : 200 {order data}
+deactivate OV
+
+== Доставка уведомления покупателю ==
+CL -> WSC : dispatch order_status_update
+activate WSC
+WSC -> HWS : send JSON\n{"type":"order_status_update",\n"status":"shipped"}
+deactivate WSC
+HWS -> ODP : onMessage(data)
+activate ODP
+ODP -> ODP : setOrder({...order, status:'shipped'})
+ODP -> ODP : setLiveStatus({label:'Отправлен'})
+ODP --> Buyer : прогресс-бар обновился\nбез перезагрузки страницы
+deactivate ODP
+
+== Keepalive ==
+HWS -> WSC : {"type":"ping"} каждые 25 сек
+WSC --> HWS : {"type":"pong"}
+@enduml

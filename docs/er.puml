@@ -1,0 +1,135 @@
+@startuml ER
+!theme plain
+skinparam backgroundColor #FAFAFA
+skinparam class {
+  BackgroundColor #E8F5E9
+  BorderColor #2E7D32
+  ArrowColor #388E3C
+  HeaderBackgroundColor #A5D6A7
+}
+skinparam linetype ortho
+
+title ER-диаграмма — VeganShop
+
+entity "users_user" as User {
+  * id : INTEGER <<PK>>
+  --
+  * username : VARCHAR(150) <<UNIQUE>>
+  * email : VARCHAR(254) <<UNIQUE>>
+  * password : VARCHAR(128)
+  first_name : VARCHAR(150)
+  last_name : VARCHAR(150)
+  bio : TEXT
+  avatar : VARCHAR(100)
+  phone : VARCHAR(20)
+  address : TEXT
+  * is_staff : BOOLEAN
+  * is_active : BOOLEAN
+  * date_joined : DATETIME
+}
+
+entity "products_category" as Category {
+  * id : INTEGER <<PK>>
+  --
+  * title : VARCHAR(150) <<UNIQUE, idx>>
+  * slug : VARCHAR(150) <<UNIQUE>>
+  description : TEXT
+  image : VARCHAR(100)
+  * is_active : BOOLEAN
+}
+
+entity "products_product" as Product {
+  * id : INTEGER <<PK>>
+  --
+  * title : VARCHAR(200) <<idx>>
+  * slug : VARCHAR(200) <<UNIQUE>>
+  * description : TEXT
+  composition : TEXT
+  * price : DECIMAL(10,2)
+  * discount : SMALLINT
+  * stock : INTEGER
+  weight : INTEGER
+  image : VARCHAR(100)
+  * is_published : BOOLEAN <<idx>>
+  * is_vegan : BOOLEAN
+  * is_organic : BOOLEAN
+  * views : INTEGER
+  * created_at : DATETIME <<idx>>
+  * updated_at : DATETIME
+  * category_id : INTEGER <<FK>>
+  author_id : INTEGER <<FK>>
+}
+
+entity "products_comment" as Comment {
+  * id : INTEGER <<PK>>
+  --
+  * text : TEXT
+  * rating : SMALLINT
+  * is_published : BOOLEAN
+  * created_at : DATETIME <<idx>>
+  * product_id : INTEGER <<FK>>
+  * author_id : INTEGER <<FK>>
+  <<UNIQUE(product_id, author_id)>>
+}
+
+entity "products_favorite" as Favorite {
+  * id : INTEGER <<PK>>
+  --
+  * created_at : DATETIME
+  * user_id : INTEGER <<FK>>
+  * product_id : INTEGER <<FK>>
+  <<UNIQUE(user_id, product_id)>>
+}
+
+entity "orders_cart" as Cart {
+  * id : INTEGER <<PK>>
+  --
+  * created_at : DATETIME
+  * updated_at : DATETIME
+  * user_id : INTEGER <<FK, UNIQUE>>
+}
+
+entity "orders_cartitem" as CartItem {
+  * id : INTEGER <<PK>>
+  --
+  * quantity : SMALLINT
+  * cart_id : INTEGER <<FK>>
+  * product_id : INTEGER <<FK>>
+  <<UNIQUE(cart_id, product_id)>>
+}
+
+entity "orders_order" as Order {
+  * id : INTEGER <<PK>>
+  --
+  * status : VARCHAR(20) <<idx>>
+  * delivery_address : TEXT
+  comment : TEXT
+  * total_price : DECIMAL(12,2)
+  * created_at : DATETIME <<idx>>
+  * updated_at : DATETIME
+  * user_id : INTEGER <<FK>>
+}
+
+entity "orders_orderitem" as OrderItem {
+  * id : INTEGER <<PK>>
+  --
+  * product_title : VARCHAR(200)
+  * price : DECIMAL(10,2)
+  * quantity : SMALLINT
+  * order_id : INTEGER <<FK>>
+  product_id : INTEGER <<FK>>
+}
+
+Category ||--o{ Product : "содержит"
+User ||--o{ Product : "добавил"
+Product ||--o{ Comment : "имеет"
+User ||--o{ Comment : "пишет"
+User ||--o{ Favorite : "добавляет"
+Product ||--o{ Favorite : "избранный"
+User ||--|| Cart : "владеет"
+Cart ||--o{ CartItem : "содержит"
+Product ||--o{ CartItem : "в корзине"
+User ||--o{ Order : "оформляет"
+Order ||--o{ OrderItem : "содержит"
+Product ||--o{ OrderItem : "куплен"
+@enduml

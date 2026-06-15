@@ -1,0 +1,76 @@
+@startuml UseCase
+!theme plain
+skinparam backgroundColor #FAFAFA
+skinparam actorStyle awesome
+skinparam usecase {
+  BackgroundColor #E8F5E9
+  BorderColor #2E7D32
+  ArrowColor #388E3C
+}
+skinparam actor {
+  BackgroundColor #C8E6C9
+  BorderColor #2E7D32
+}
+
+left to right direction
+title Диаграмма вариантов использования — VeganShop
+
+actor "Гость" as Guest
+actor "Покупатель" as Buyer
+actor "Администратор" as Admin
+
+Buyer --|> Guest
+Admin --|> Buyer
+
+rectangle "VeganShop" {
+  package "Публичный доступ" {
+    usecase "UC-01\nПросмотр каталога" as UC01
+    usecase "UC-02\nПоиск товаров" as UC02
+    usecase "UC-03\nФильтрация товаров" as UC03
+    usecase "UC-04\nПросмотр товара" as UC04
+    usecase "UC-05\nРегистрация" as UC05
+    usecase "UC-06\nАвторизация" as UC06
+  }
+
+  package "Приватный доступ" {
+    usecase "UC-07\nУправление корзиной" as UC07
+    usecase "UC-08\nОформление заказа" as UC08
+    usecase "UC-09\nОтслеживание заказа\n(WebSocket)" as UC09
+    usecase "UC-10\nОтмена заказа" as UC10
+    usecase "UC-11\nДобавление отзыва" as UC11
+    usecase "UC-12\nУправление избранным" as UC12
+    usecase "UC-13\nРедактирование профиля" as UC13
+  }
+
+  package "Администрирование" {
+    usecase "UC-14\nДобавление товара" as UC14
+    usecase "UC-15\nУправление категориями" as UC15
+    usecase "UC-16\nИзменение статуса заказа\n(real-time)" as UC16
+    usecase "UC-17\nУправление пользователями" as UC17
+  }
+}
+
+Guest --> UC01
+Guest --> UC02
+Guest --> UC03
+Guest --> UC04
+Guest --> UC05
+Guest --> UC06
+
+Buyer --> UC07
+Buyer --> UC08
+Buyer --> UC09
+Buyer --> UC10
+Buyer --> UC11
+Buyer --> UC12
+Buyer --> UC13
+
+Admin --> UC14
+Admin --> UC15
+Admin --> UC16
+Admin --> UC17
+
+UC08 .> UC07 : <<include>>
+UC09 .> UC08 : <<extend>>
+UC16 .> UC09 : <<extend>>
+@enduml

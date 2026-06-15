@@ -1,0 +1,63 @@
+@startuml SequenceJWT
+!theme plain
+skinparam backgroundColor #FAFAFA
+skinparam sequence {
+  ActorBackgroundColor #C8E6C9
+  ActorBorderColor #2E7D32
+  ParticipantBackgroundColor #E8F5E9
+  ParticipantBorderColor #2E7D32
+  ArrowColor #388E3C
+}
+
+title Диаграмма последовательности — JWT-аутентификация и автообновление токена
+
+actor "Пользователь" as User
+participant "LoginPage\n(React)" as LP
+participant "AuthContext" as AC
+participant "api.js\n(Axios + interceptors)" as AX
+participant "TokenObtainPairView\n(Django)" as TV
+participant "TokenRefreshView\n(Django)" as TR
+participant "Protected API\n(DRF)" as PA
+database "localStorage" as LS
+
+== Первичная авторизация ==
+User -> LP : ввести email + пароль
+LP -> AC : login(email, password)
+AC -> AX : POST /api/auth/login/\n{email, password}
+AX -> TV : request
+TV --> AX : 200 {access, refresh}
+AX --> AC : tokens
+AC -> LS : setItem('access', token)\nsetItem('refresh', token)
+AC -> AX : GET /api/auth/profile/
+AX --> AC : {user data}
+AC --> LP : user установлен
+LP --> User : redirect → /
+
+== Авторизованный запрос ==
+User -> AX : любой API-запрос
+AX -> AX : request interceptor:\nAuthorization: Bearer {access}
+AX -> PA : GET /api/products/favorites/
+PA --> AX : 200 {data}
+AX --> User : данные
+
+== Автообновление истёкшего токена ==
+User -> AX : API-запрос (access истёк)
+AX -> PA : запрос с истёкшим токеном
+PA --> AX : 401 Unauthorized
+AX -> AX : response interceptor:\n_retry = true
+AX -> LS : getItem('refresh')
+AX -> TR : POST /api/auth/token/refresh/\n{refresh}
+TR --> AX : 200 {access: newToken}
+AX -> LS : setItem('access', newToken)
+AX -> PA : повторить исходный запрос\nс новым токеном
+PA --> AX : 200 {data}
+AX --> User : данные (прозрачно для пользователя)
+
+== Выход ==
+User -> AC : logout()
+AC -> AX : POST /api/auth/logout/\n{refresh}
+AX -> PA : blacklist refresh token
+PA --> AX : 200
+AC -> LS : removeItem('access')\nremoveItem('refresh')
+AC --> User : user = null, redirect → /
+@enduml

@@ -1,0 +1,87 @@
+@startuml SequenceCheckout
+!theme plain
+skinparam backgroundColor #FAFAFA
+skinparam sequence {
+  ActorBackgroundColor #C8E6C9
+  ActorBorderColor #2E7D32
+  ParticipantBackgroundColor #E8F5E9
+  ParticipantBorderColor #2E7D32
+  ArrowColor #388E3C
+  LifeLineBorderColor #81C784
+}
+
+title Диаграмма последовательности — UC-08 «Оформление заказа»
+
+actor "Покупатель" as User
+participant "CheckoutPage\n(React)" as CP
+participant "CartContext" as CC
+participant "api.js\n(Axios)" as API
+participant "OrderViewSet\n(Django)" as OV
+participant "Cart / CartItem\n(ORM)" as Cart
+participant "Product\n(ORM)" as Prod
+participant "Order / OrderItem\n(ORM)" as Ord
+participant "ChannelLayer\n(WebSocket)" as CL
+
+User -> CP : нажать «Подтвердить заказ»
+activate CP
+
+CP -> API : POST /api/orders/checkout/\n{delivery_address}
+activate API
+
+API -> OV : checkout(request)
+activate OV
+
+OV -> Cart : get Cart WHERE user=request.user
+activate Cart
+Cart --> OV : cart + items
+deactivate Cart
+
+alt корзина пуста
+  OV --> API : 400 «Корзина пуста»
+  API --> CP : AxiosError
+  CP --> User : показать ошибку
+else товаров нет на складе
+  OV --> API : 400 «Товар X недоступен»
+  API --> CP : AxiosError
+  CP --> User : показать ошибку
+else успешное оформление
+  loop для каждого CartItem
+    OV -> Prod : проверить stock >= quantity
+    OV -> Prod : UPDATE stock -= quantity
+    activate Prod
+    Prod --> OV : ok
+    deactivate Prod
+  end
+
+  OV -> Ord : CREATE Order(status=pending,\ntotal_price, delivery_address)
+  activate Ord
+  Ord --> OV : order
+  deactivate Ord
+
+  loop для каждого CartItem
+    OV -> Ord : CREATE OrderItem\n(product_title, price, qty)
+  end
+
+  OV -> Cart : DELETE CartItem (очистить корзину)
+
+  OV --> API : 201 {order data}
+  deactivate OV
+
+  API --> CP : response.data
+  deactivate API
+
+  CP -> CC : fetchCart() — синхронизировать корзину
+  activate CC
+  CC --> CP : cart обновлена (пуста)
+  deactivate CC
+
+  CP --> User : redirect → /orders/{id}
+  deactivate CP
+
+  note over User, CL
+    После redirect — OrderDetailPage
+    устанавливает WebSocket /ws/orders/{id}/
+    для отслеживания статуса в реальном времени
+  end note
+end
+@enduml
